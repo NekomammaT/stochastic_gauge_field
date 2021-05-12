@@ -4,12 +4,12 @@
 
 using namespace std;
 
-#define PREC 10*3.33
+#define PREC 50*3.33
 
 const complex<double> II(0,1);
 
-complex<double> WhittW(const double xi, const double Sg, const double z, const slong prec);
-complex<double> WhittM(const double xi, const double Sg, const double z, const slong prec);
+complex<double> WhittW(const complex<double> kappa, const complex<double> mu, const complex<double> z, const slong prec);
+complex<double> WhittM(const complex<double> kappa, const complex<double> mu, const complex<double> z, const slong prec);
 
 int main()
 {
@@ -17,10 +17,10 @@ int main()
   double xi = 5;
   double z = 0.1;
   
-  cout << WhittW(xi,2,z,prec) << " " << WhittM(xi,2,z,prec) << endl;
+  cout << WhittW(xi,3,z,prec) << " " << WhittM(xi,3,z,prec) << endl;
 }
 
-complex<double> WhittW(const double xi, const double Sg, const double z, const slong prec) {
+complex<double> WhittW(const complex<double> kappa, const complex<double> mu, const complex<double> z, const slong prec) {
   acb_t acba,acbb,acbz,acbU;
   acb_init(acba);
   acb_init(acbb);
@@ -35,7 +35,7 @@ complex<double> WhittW(const double xi, const double Sg, const double z, const s
   return exp(II*z)*pow(-2.*II*z,1+Sg/2)*compU;
 }
 
-complex<double> WhittM(const double xi, const double Sg, const double z, const slong prec) {
+complex<double> WhittM(const complex<double> kappa, const complex<double> mu, const complex<double> z, const slong prec) {
   acb_t acba,acbb,acbz,acbM;
   acb_init(acba);
   acb_init(acbb);
@@ -49,5 +49,6 @@ complex<double> WhittM(const double xi, const double Sg, const double z, const s
 			arf_get_d(arb_midref(acb_imagref(acbM)),ARF_RND_DOWN));
   return exp(II*z)*pow(-2.*II*z,1+Sg/2)*compM;
 }
+
 
 
