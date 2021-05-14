@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define PREC 15*3.33
+#define PREC 50*3.33
 #define EE 0.55
 #define TOL 0.1
 #define SGSAFE 0.5
@@ -39,13 +39,17 @@ double PBB(const double xi, const double SgE, const double SgB, const double gam
 double PEE(const double xi, const double SgE, const double SgB, const double gamma,
 	   const double cs, const double x, const slong prec);
 double rhoBcs(const double xi, const double SgE, const double SgB,
-	      const int lnxstep, const double xmin, const double cs, const slong prec);
+	      const int lnxstep, //const double xmin,
+	      const double cs, const slong prec);
 double rhoEcs(const double xi, const double SgE, const double SgB,
-	      const int lnxstep, const double xmin, const double cs, const slong prec);
+	      const int lnxstep, //const double xmin,
+	      const double cs, const slong prec);
 double rhoB(const double xi, const double SgE, const double SgB,
-	    const int csstep, const int lnxstep, const double xmin, const slong prec);
+	    const int csstep, const int lnxstep, //const double xmin,
+	    const slong prec);
 double rhoE(const double xi, const double SgE, const double SgB,
-	    const int csstep, const int lnxstep, const double xmin, const slong prec);
+	    const int csstep, const int lnxstep, //const double xmin,
+	    const slong prec);
 double SgEMV(const double ee, const double rhoB, const double rhoE);
 double SgBMV(const double ee, const double rhoB, const double rhoE);
 
@@ -69,7 +73,7 @@ int main(int argc, char *argv[])
   double ee = EE;
   int csstep = CSSTEP;
   int lnxstep = LNXSTEP;
-  double xmin = 0.01;
+  //double xmin = 0.01;
   
   double xi = atof(argv[1]);
   double SgEmax = 10*xi;
@@ -87,8 +91,10 @@ int main(int argc, char *argv[])
   double rhoBout, rhoEout, SgEout, SgBout;
 
   while (true) {
-    rhoBout = rhoB(xi,SgEin,SgBin,csstep,lnxstep,xmin,prec);
-    rhoEout = rhoE(xi,SgEin,SgBin,csstep,lnxstep,xmin,prec);
+    rhoBout = rhoB(xi,SgEin,SgBin,csstep,lnxstep,//xmin,
+		   prec);
+    rhoEout = rhoE(xi,SgEin,SgBin,csstep,lnxstep,//xmin,
+		   prec);
     SgEout = SgEMV(ee,rhoBout,rhoEout);
     SgBout = SgBMV(ee,rhoBout,rhoEout);
 
@@ -220,16 +226,19 @@ double PEE(const double xi, const double SgE, const double SgB, const double gam
 }
 
 double rhoBcs(const double xi, const double SgE, const double SgB,
-	      const int lnxstep, const double xmin, const double cs, const slong prec) {
+	      const int lnxstep, //const double xmin,
+	      const double cs, const slong prec) {
   double rhoBcs = 0;
 
   double xif = xieff(xi,SgB,cs);
   double gamma = 2*xif;
+  double xmax = gamma/2;
+  double xmin = xmax*(1e-3);
 
-  double dlnx = (log(gamma)-log(xmin))/lnxstep;
+  double dlnx = (log(xmax)-log(xmin))/lnxstep;
   double xx;
   
-  rhoBcs += (PBB(xi,SgE,SgB,gamma,cs,xmin,prec) + PBB(xi,SgE,SgB,gamma,cs,gamma,prec))/2*dlnx;
+  rhoBcs += (PBB(xi,SgE,SgB,gamma,cs,xmin,prec) + PBB(xi,SgE,SgB,gamma,cs,xmax,prec))/2*dlnx;
   
   for (int i=1; i<lnxstep; i++) {
     xx = xmin*exp(i*dlnx);
@@ -240,14 +249,17 @@ double rhoBcs(const double xi, const double SgE, const double SgB,
 }
 
 double rhoB(const double xi, const double SgE, const double SgB,
-	    const int csstep, const int lnxstep, const double xmin, const slong prec) {
+	    const int csstep, const int lnxstep, //const double xmin,
+	    const slong prec) {
   double rhoB = 0;
 
   double dcs = 2./csstep;
   double csmin = -1, csmax = 1;
   double cs;
   
-  rhoB += (rhoBcs(xi,SgE,SgB,lnxstep,xmin,csmin,prec) + rhoBcs(xi,SgE,SgB,lnxstep,xmin,csmax,prec))/2*dcs;
+  rhoB += (rhoBcs(xi,SgE,SgB,lnxstep,//xmin,
+		  csmin,prec) + rhoBcs(xi,SgE,SgB,lnxstep,//xmin,
+				       csmax,prec))/2*dcs;
   int done = 50;
   cout << "\r" << setw(3) << done/csstep << "%" << flush;
 
@@ -265,32 +277,30 @@ double rhoB(const double xi, const double SgE, const double SgB,
       cout << "\r" << setw(3) << done/csstep << "%" << flush;
     }
 
-    /*
-    if (!(rhoB > 0)) {
-      rhoB = 0;
-      continue;
-      } else {*/
 #ifdef _OPENMP
 #pragma omp atomic
 #endif
-      rhoB += rhoBcs(xi,SgE,SgB,lnxstep,xmin,cs,prec)*dcs;
-      //}
+    rhoB += rhoBcs(xi,SgE,SgB,lnxstep,//xmin,
+		   cs,prec)*dcs;
   }
 
   return rhoB/4;
 }
 
 double rhoEcs(const double xi, const double SgE, const double SgB,
-	      const int lnxstep, const double xmin, const double cs, const slong prec) {
+	      const int lnxstep, //const double xmin,
+	      const double cs, const slong prec) {
   double rhoEcs = 0;
 
   double xif = xieff(xi,SgB,cs);
   double gamma = 2*xif;
+  double xmax = gamma/2;
+  double xmin = xmax*(1e-3);
 
-  double dlnx = (log(gamma)-log(xmin))/lnxstep;
+  double dlnx = (log(xmax)-log(xmin))/lnxstep;
   double xx;
   
-  rhoEcs += (PEE(xi,SgE,SgB,gamma,cs,xmin,prec) + PEE(xi,SgE,SgB,gamma,cs,gamma,prec))/2*dlnx;
+  rhoEcs += (PEE(xi,SgE,SgB,gamma,cs,xmin,prec) + PEE(xi,SgE,SgB,gamma,cs,xmax,prec))/2*dlnx;
   
   for (int i=1; i<lnxstep; i++) {
     xx = xmin*exp(i*dlnx);
@@ -301,14 +311,17 @@ double rhoEcs(const double xi, const double SgE, const double SgB,
 }
 
 double rhoE(const double xi, const double SgE, const double SgB,
-	    const int csstep, const int lnxstep, const double xmin, const slong prec) {
+	    const int csstep, const int lnxstep, //const double xmin,
+	    const slong prec) {
   double rhoE = 0;
 
   double dcs = 2./csstep;
   double csmin = -1, csmax = 1;
   double cs;
   
-  rhoE += (rhoEcs(xi,SgE,SgB,lnxstep,xmin,csmin,prec) + rhoEcs(xi,SgE,SgB,lnxstep,xmin,csmax,prec))/2*dcs;
+  rhoE += (rhoEcs(xi,SgE,SgB,lnxstep,//xmin,
+		  csmin,prec) + rhoEcs(xi,SgE,SgB,lnxstep,//xmin,
+				       csmax,prec))/2*dcs;
   int done = 50*(csstep+1);
   cout << "\r" << setw(3) << done/csstep << "%" << flush;
 
@@ -326,16 +339,11 @@ double rhoE(const double xi, const double SgE, const double SgB,
       cout << "\r" << setw(3) << done/csstep << "%" << flush;
     }
 
-    /*
-    if (!(rhoE > 0)) {
-      rhoE = 0;
-      continue;
-      } else {*/
 #ifdef _OPENMP
 #pragma omp atomic
 #endif
-      rhoE += rhoEcs(xi,SgE,SgB,lnxstep,xmin,cs,prec)*dcs;
-      //}
+    rhoE += rhoEcs(xi,SgE,SgB,lnxstep,//xmin,
+		   cs,prec)*dcs;
   }
   cout << "   " << flush;
 
