@@ -12,10 +12,12 @@
 
 using namespace std;
 
-#define PREC 50*3.33
+#define PREC 15*3.33
 #define EE 0.55
 #define TOL 0.1
-#define SGMAX 100.
+#define SGSAFE 0.5
+#define CSSTEP 200
+#define LNXSTEP 300
 
 const complex<double> II(0,1);
 
@@ -65,13 +67,15 @@ int main(int argc, char *argv[])
   
   double prec = PREC;
   double ee = EE;
-  int csstep = 20; //200;
-  int lnxstep = 30; //300;
+  int csstep = CSSTEP;
+  int lnxstep = LNXSTEP;
   double xmin = 0.01;
   
   double xi = atof(argv[1]);
-  double SgEin = 0.01;
-  double SgBin = 0.01;
+  double SgEmax = 10*xi;
+  double SgBmax = 2*xi;
+  double SgEin = 1;
+  double SgBin = 1;
   
 
 #ifdef _OPENMP
@@ -88,12 +92,18 @@ int main(int argc, char *argv[])
     SgEout = SgEMV(ee,rhoBout,rhoEout);
     SgBout = SgBMV(ee,rhoBout,rhoEout);
 
-    cout << "(SgEin, SgBin) = (" << SgEin << ", " << SgBin << "), (SgEout, SgBout) = ("
-	 << SgEout << ", " << SgBout << ")" << flush;
+    cout << "(SgEin, SgBin) = (" << SgEin << ", " << SgBin << "), (rhoEout, rhoBout) = (" << rhoEout << ", " << rhoBout
+	 << "), (SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << flush;
 
-    if (SgEout > SGMAX || SgBout > SGMAX) {
-      SgEout = min(SgEout,SGMAX);
-      SgBout = min(SgBout,SGMAX);
+    if (SgEout > SgEmax || SgBout > SgBmax) {
+      SgEout = min(SgEout,SgEmax);
+      SgBout = min(SgBout,SgBmax);
+
+      cout << ", Sg is reduced to (SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << flush;
+    }
+    if (!(SgEout > 0) || !(SgBout > 0)) {
+      SgEout = SgEin*SGSAFE;
+      SgBout = SgBin*SGSAFE;
 
       cout << ", Sg is reduced to (SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << flush;
     }
@@ -103,8 +113,8 @@ int main(int argc, char *argv[])
       break;
     }
 
-    SgEin = sqrt(SgEin*SgEout);
-    SgBin = sqrt(SgBin*SgBout);
+    SgEin = pow(SgEin*SgEin*SgEout,1./3);
+    SgBin = pow(SgBin*SgBin*SgBout,1./3);
   }
   cout << "(SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << endl;
   
@@ -246,15 +256,25 @@ double rhoB(const double xi, const double SgE, const double SgB,
 #endif
   for (int i=1; i<csstep; i++) {
     cs = csmin+i*dcs;
-
+    
 #ifdef _OPENMP
-#pragma ompe critical
+#pragma omp critical
 #endif
     {
-      rhoB += rhoBcs(xi,SgE,SgB,lnxstep,xmin,cs,prec)*dcs;
       done += 50;
       cout << "\r" << setw(3) << done/csstep << "%" << flush;
     }
+
+    /*
+    if (!(rhoB > 0)) {
+      rhoB = 0;
+      continue;
+      } else {*/
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+      rhoB += rhoBcs(xi,SgE,SgB,lnxstep,xmin,cs,prec)*dcs;
+      //}
   }
 
   return rhoB/4;
@@ -297,15 +317,25 @@ double rhoE(const double xi, const double SgE, const double SgB,
 #endif
   for (int i=1; i<csstep; i++) {
     cs = csmin+i*dcs;
-
+    
 #ifdef _OPENMP
-#pragma ompe critical
+#pragma omp critical
 #endif
     {
-      rhoE += rhoEcs(xi,SgE,SgB,lnxstep,xmin,cs,prec)*dcs;
       done += 50;
       cout << "\r" << setw(3) << done/csstep << "%" << flush;
     }
+
+    /*
+    if (!(rhoE > 0)) {
+      rhoE = 0;
+      continue;
+      } else {*/
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+      rhoE += rhoEcs(xi,SgE,SgB,lnxstep,xmin,cs,prec)*dcs;
+      //}
   }
   cout << "   " << flush;
 
