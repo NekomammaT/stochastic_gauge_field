@@ -119,8 +119,8 @@ int main(int argc, char *argv[])
       break;
     }
 
-    SgEin = pow(SgEin*SgEin*SgEout,1./3);
-    SgBin = pow(SgBin*SgBin*SgBout,1./3);
+    SgEin = pow(SgEin*SgEin*SgEin*SgEout,1./4);
+    SgBin = pow(SgBin*SgBin*SgBin*SgBout,1./4);
   }
   cout << "(SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << endl;
   
