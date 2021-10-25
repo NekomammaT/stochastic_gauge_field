@@ -14,7 +14,7 @@ using namespace std;
 
 #define PREC 50*3.33
 #define EE 0.55
-#define TOL 0.1
+#define TOL 0.01
 #define SGSAFE 0.5
 #define CSSTEP 200 //200
 #define LNXSTEP 300 //300
@@ -78,10 +78,10 @@ int main(int argc, char *argv[])
   
   double xi = atof(argv[1]);
   double SgEmax = 10*xi;
-  double SgBmax = 2*xi;
+  double SgBmax = 10*xi; //2*xi;
   double SgEin = 1;
   double SgBin = 1;
-  
+
 
 #ifdef _OPENMP
   cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << endl;
@@ -124,7 +124,6 @@ int main(int argc, char *argv[])
     SgBin = pow(SgBin*SgBin*SgBin*SgBout,1./4);
   }
   cout << "(SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << endl;
-  
 
 
   gettimeofday(&tv, &tz);
@@ -237,7 +236,7 @@ double rhoBcs(const double xi, const double SgE, const double SgB,
   double rhoBcs = 0;
 
   double xif = xieff(xi,SgB,cs);
-  double gamma = 2*xif;
+  double gamma = 2*abs(xif);
   double xmax = gamma/2;
   double xmin = xmax*(1e-3);
 
@@ -299,7 +298,7 @@ double rhoEcs(const double xi, const double SgE, const double SgB,
   double rhoEcs = 0;
 
   double xif = xieff(xi,SgB,cs);
-  double gamma = 2*xif;
+  double gamma = 2*abs(xif);
   double xmax = gamma/2;
   double xmin = xmax*(1e-3);
 
