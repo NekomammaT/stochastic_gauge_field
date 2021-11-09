@@ -14,10 +14,10 @@ using namespace std;
 
 #define PREC 50*3.33
 #define EE 0.55
-#define TOL 0.01
+#define TOL 0.1 //0.01
 #define SGSAFE 0.5
 #define CSSTEP 200 //200
-#define LNXSTEP 300 //300
+#define LNXSTEP 30 //300
 
 const complex<double> II(0,1);
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
   
   double xi = atof(argv[1]);
   double SgEmax = 10*xi;
-  double SgBmax = 2*xi;
+  double SgBmax = xi; //2*xi;
   double SgEin = 1;
   double SgEpin = 1;
   double SgBin = 1;
