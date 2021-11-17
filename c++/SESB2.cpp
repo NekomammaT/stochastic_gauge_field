@@ -16,8 +16,8 @@ using namespace std;
 #define EE 0.55
 #define TOL 0.01
 #define SGSAFE 0.5
-#define CSSTEP 200 //200
-#define LNXSTEP 300 //300
+#define CSSTEP 20 //200
+#define LNXSTEP 30 //300
 
 const complex<double> II(0,1);
 
