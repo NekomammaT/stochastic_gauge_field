@@ -14,9 +14,9 @@ using namespace std;
 
 #define PREC 50*3.33
 #define EE 0.55
-#define TOL 0.01
-#define SGSAFE 0.5
-#define CSSTEP 20 //200
+#define TOL 0.1 //0.01
+#define EBSAFE 0.5
+#define CSSTEP 200 //200
 #define LNXSTEP 30 //300
 
 const complex<double> II(0,1);
@@ -25,8 +25,8 @@ complex<double> WhittW(const complex<double> kappa, const complex<double> mu, co
 complex<double> WhittM(const complex<double> kappa, const complex<double> mu, const complex<double> z, const int reg, const slong prec);
 complex<double> Gamma(const complex<double> z, const slong prec);
 
-double xieff(const double xi, const double SgB, const double cs);
-double Sgeff(const double SgE, const double cs);
+double xieff(const double xi, const double SgB, const double SgBp, const double cs);
+double Sgeff(const double SgE, const double SgEp, const double cs);
 
 complex<double> WS(const double xi, const double Sg, const double x, const slong prec);
 complex<double> MS(const double xi, const double Sg, const double x, const slong prec);
@@ -35,24 +35,26 @@ complex<double> MSp(const double xi, const double Sg, const double x, const slon
 complex<double> c1(const double xi, const double xieff, const double Sgeff, const double gamma, const slong prec);
 complex<double> c2(const double xi, const double xieff, const double Sgeff, const double gamma, const slong prec);
 
-double PBB(const double xi, const double SgE, const double SgB, const double gamma,
+double PBB(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp, const double gamma,
 	   const double cs, const double x, const slong prec);
-double PEE(const double xi, const double SgE, const double SgB, const double gamma,
+double PEE(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp, const double gamma,
 	   const double cs, const double x, const slong prec);
-double rhoBcs(const double xi, const double SgE, const double SgB,
+double rhoBcs(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	      const int lnxstep, //const double xmin,
 	      const double cs, const slong prec);
-double rhoEcs(const double xi, const double SgE, const double SgB,
+double rhoEcs(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	      const int lnxstep, //const double xmin,
 	      const double cs, const slong prec);
-double rhoB(const double xi, const double SgE, const double SgB,
+double rhoB(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	    const int csstep, const int lnxstep, //const double xmin,
 	    const slong prec);
-double rhoE(const double xi, const double SgE, const double SgB,
+double rhoE(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	    const int csstep, const int lnxstep, //const double xmin,
 	    const slong prec);
 double SgEMV(const double ee, const double rhoB, const double rhoE);
+double SgEpMV(const double ee, const double rhoB, const double rhoE);
 double SgBMV(const double ee, const double rhoB, const double rhoE);
+double SgBpMV(const double ee, const double rhoB, const double rhoE);
 
 
 int main(int argc, char *argv[])
@@ -78,9 +80,17 @@ int main(int argc, char *argv[])
   
   double xi = atof(argv[1]);
   double SgEmax = 10*xi;
-  double SgBmax = 10*xi; //2*xi;
-  double SgEin = 1;
-  double SgBin = 1;
+  double SgBmax = 2*xi;
+  double E0max = SgBmax*6*M_PI*M_PI/ee/ee/ee;
+  double B0max = SgEmax*6*M_PI*M_PI/ee/ee/ee;
+  double E0in = E0max/10;
+  double B0in = B0max/10;
+  double rhoEin = E0in*E0in/2.;
+  double rhoBin = B0in*B0in/2.;
+  double SgEin = SgEMV(ee,rhoBin,rhoEin);
+  double SgEpin = SgEpMV(ee,rhoBin,rhoEin);
+  double SgBin = SgBMV(ee,rhoBin,rhoEin);
+  double SgBpin = SgBpMV(ee,rhoBin,rhoEin);
 
 
 #ifdef _OPENMP
@@ -89,41 +99,58 @@ int main(int argc, char *argv[])
 
   cout << "xi = " << xi << endl;
 
-  double rhoBout, rhoEout, SgEout, SgBout;
+  double rhoBout, rhoEout, B0out, E0out, SgEout, SgEpout, SgBout, SgBpout;
 
   while (true) {
-    rhoBout = rhoB(xi,SgEin,SgBin,csstep,lnxstep,//xmin,
+    rhoBout = rhoB(xi,SgEin,SgEpin,SgBin,SgBpin,csstep,lnxstep,//xmin,
 		   prec);
-    rhoEout = rhoE(xi,SgEin,SgBin,csstep,lnxstep,//xmin,
+    rhoEout = rhoE(xi,SgEin,SgEpin,SgBin,SgBpin,csstep,lnxstep,//xmin,
 		   prec);
+    B0out = sqrt(2*rhoBout);
+    E0out = sqrt(2*rhoEout);
+    
+    cout << "(E0in, B0in) = (" << E0in << ", " << B0in << "), (E0out, B0out) = (" << E0out << ", " << B0out << "), " << flush;
+
+    if (E0out > E0max || B0out > B0max) {
+      E0out = min(E0out,E0max);
+      B0out = min(B0out,B0max);
+      rhoBout = B0out*B0out/2.;
+      rhoEout = E0out*E0out/2.;
+
+      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "), " << flush;
+    }
+
+    if (!(rhoEout > 0) || !(rhoBout > 0)) {
+      E0out = E0in*EBSAFE;
+      B0out = B0in*EBSAFE;
+      rhoEout = E0out*E0out/2.;
+      rhoBout = B0out*B0out/2.;
+
+      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "), " << flush;
+    }
+
     SgEout = SgEMV(ee,rhoBout,rhoEout);
+    SgEpout = SgEpMV(ee,rhoBout,rhoEout);
     SgBout = SgBMV(ee,rhoBout,rhoEout);
+    SgBpout = SgBpMV(ee,rhoBout,rhoEout);
 
-    cout << "(SgEin, SgBin) = (" << SgEin << ", " << SgBin << "), (rhoEout, rhoBout) = (" << rhoEout << ", " << rhoBout
-	 << "), (SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << flush;
+    cout << "(SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
 
-    if (SgEout > SgEmax || SgBout > SgBmax) {
-      SgEout = min(SgEout,SgEmax);
-      SgBout = min(SgBout,SgBmax);
-
-      cout << ", Sg is reduced to (SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << flush;
-    }
-    if (!(SgEout > 0) || !(SgBout > 0)) {
-      SgEout = SgEin*SGSAFE;
-      SgBout = SgBin*SGSAFE;
-
-      cout << ", Sg is reduced to (SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << flush;
-    }
-    cout << endl;
-
-    if (abs(SgEin-SgEout)/SgEout < TOL && abs(SgBin-SgBout)/SgBout < TOL) {
+    if (abs(E0in-E0out)/E0out < TOL && abs(B0in-B0out)/B0out < TOL) {
       break;
     }
 
-    SgEin = pow(SgEin*SgEin*SgEin*SgEout,1./4);
-    SgBin = pow(SgBin*SgBin*SgBin*SgBout,1./4);
+    E0in = pow(E0in*E0in*E0in*E0out,1./4);
+    B0in = pow(B0in*B0in*B0in*B0out,1./4);
+    rhoEin = E0in*E0in/2.;
+    rhoBin = B0in*B0in/2.;
+
+    SgEin = SgEMV(ee,rhoBin,rhoEin);
+    SgEpin = SgEpMV(ee,rhoBin,rhoEin);
+    SgBin = SgBMV(ee,rhoBin,rhoEin);
+    SgBpin = SgBpMV(ee,rhoBin,rhoEin);
   }
-  cout << "(SgEout, SgBout) = (" << SgEout << ", " << SgBout << ")" << endl;
+  cout << "(E0out, B0out) = (" << E0out << ", " << B0out << "), (SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
 
 
   gettimeofday(&tv, &tz);
@@ -171,11 +198,11 @@ complex<double> Gamma(const complex<double> z, const slong prec) {
 }
 
 
-double xieff(const double xi, const double SgB, const double cs) {
-  return xi-1./2*SgB*(1-cs*cs);
+double xieff(const double xi, const double SgB, const double SgBp, const double cs) {
+  return xi-1./2*(SgB + SgBp*(1-cs*cs));
 }
-double Sgeff(const double SgE, const double cs) {
-  return SgE*(1-cs*cs);
+double Sgeff(const double SgE, const double SgEp, const double cs) {
+  return SgE + SgEp*(1-cs*cs);
 }
 
 
@@ -210,18 +237,18 @@ complex<double> c2(const double xi, const double xieff, const double Sgeff, cons
 }
 
 
-double PBB(const double xi, const double SgE, const double SgB, const double gamma,
+double PBB(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp, const double gamma,
 	   const double cs, const double x, const slong prec) {
-  double xif = xieff(xi,SgB,cs);
-  double Sgf = Sgeff(SgE,cs);
+  double xif = xieff(xi,SgB,SgBp,cs);
+  double Sgf = Sgeff(SgE,SgEp,cs);
   return exp(M_PI*xi)*pow(x,4+Sgf)*norm(c1(xi,xif,Sgf,gamma,prec)*WS(xif,Sgf,x,prec)
 					+ c2(xi,xif,Sgf,gamma,prec)*MS(xif,Sgf,x,prec));
 }
 
-double PEE(const double xi, const double SgE, const double SgB, const double gamma,
+double PEE(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp, const double gamma,
 	   const double cs, const double x, const slong prec) {
-  double xif = xieff(xi,SgB,cs);
-  double Sgf = Sgeff(SgE,cs);
+  double xif = xieff(xi,SgB,SgBp,cs);
+  double Sgf = Sgeff(SgE,SgEp,cs);
   complex<double> cc1 = c1(xi,xif,Sgf,gamma,prec);
   complex<double> cc2 = c2(xi,xif,Sgf,gamma,prec);
   
@@ -230,12 +257,12 @@ double PEE(const double xi, const double SgE, const double SgB, const double gam
 	  + Sgf/2./x *(cc1*WS(xif,Sgf,x,prec) + cc2*MS(xif,Sgf,x,prec)) );
 }
 
-double rhoBcs(const double xi, const double SgE, const double SgB,
+double rhoBcs(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	      const int lnxstep, //const double xmin,
 	      const double cs, const slong prec) {
   double rhoBcs = 0;
 
-  double xif = xieff(xi,SgB,cs);
+  double xif = xieff(xi,SgB,SgBp,cs);
   double gamma = 2*abs(xif);
   double xmax = gamma/2;
   double xmin = xmax*(1e-3);
@@ -243,17 +270,17 @@ double rhoBcs(const double xi, const double SgE, const double SgB,
   double dlnx = (log(xmax)-log(xmin))/lnxstep;
   double xx;
   
-  rhoBcs += (PBB(xi,SgE,SgB,gamma,cs,xmin,prec) + PBB(xi,SgE,SgB,gamma,cs,xmax,prec))/2*dlnx;
+  rhoBcs += (PBB(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xmin,prec) + PBB(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xmax,prec))/2*dlnx;
   
   for (int i=1; i<lnxstep; i++) {
     xx = xmin*exp(i*dlnx);
-    rhoBcs += PBB(xi,SgE,SgB,gamma,cs,xx,prec)*dlnx;
+    rhoBcs += PBB(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xx,prec)*dlnx;
   }
 
   return rhoBcs;
 }
 
-double rhoB(const double xi, const double SgE, const double SgB,
+double rhoB(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	    const int csstep, const int lnxstep, //const double xmin,
 	    const slong prec) {
   double rhoB = 0;
@@ -262,8 +289,8 @@ double rhoB(const double xi, const double SgE, const double SgB,
   double csmin = -1, csmax = 1;
   double cs;
   
-  rhoB += (rhoBcs(xi,SgE,SgB,lnxstep,//xmin,
-		  csmin,prec) + rhoBcs(xi,SgE,SgB,lnxstep,//xmin,
+  rhoB += (rhoBcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
+		  csmin,prec) + rhoBcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
 				       csmax,prec))/2*dcs;
   int done = 50;
   cout << "\r" << setw(3) << done/csstep << "%" << flush;
@@ -285,19 +312,19 @@ double rhoB(const double xi, const double SgE, const double SgB,
 #ifdef _OPENMP
 #pragma omp atomic
 #endif
-    rhoB += rhoBcs(xi,SgE,SgB,lnxstep,//xmin,
+    rhoB += rhoBcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
 		   cs,prec)*dcs;
   }
 
   return rhoB/4;
 }
 
-double rhoEcs(const double xi, const double SgE, const double SgB,
+double rhoEcs(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	      const int lnxstep, //const double xmin,
 	      const double cs, const slong prec) {
   double rhoEcs = 0;
 
-  double xif = xieff(xi,SgB,cs);
+  double xif = xieff(xi,SgB,SgBp,cs);
   double gamma = 2*abs(xif);
   double xmax = gamma/2;
   double xmin = xmax*(1e-3);
@@ -305,17 +332,17 @@ double rhoEcs(const double xi, const double SgE, const double SgB,
   double dlnx = (log(xmax)-log(xmin))/lnxstep;
   double xx;
   
-  rhoEcs += (PEE(xi,SgE,SgB,gamma,cs,xmin,prec) + PEE(xi,SgE,SgB,gamma,cs,xmax,prec))/2*dlnx;
+  rhoEcs += (PEE(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xmin,prec) + PEE(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xmax,prec))/2*dlnx;
   
   for (int i=1; i<lnxstep; i++) {
     xx = xmin*exp(i*dlnx);
-    rhoEcs += PEE(xi,SgE,SgB,gamma,cs,xx,prec)*dlnx;
+    rhoEcs += PEE(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xx,prec)*dlnx;
   }
 
   return rhoEcs;
 }
 
-double rhoE(const double xi, const double SgE, const double SgB,
+double rhoE(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
 	    const int csstep, const int lnxstep, //const double xmin,
 	    const slong prec) {
   double rhoE = 0;
@@ -324,8 +351,8 @@ double rhoE(const double xi, const double SgE, const double SgB,
   double csmin = -1, csmax = 1;
   double cs;
   
-  rhoE += (rhoEcs(xi,SgE,SgB,lnxstep,//xmin,
-		  csmin,prec) + rhoEcs(xi,SgE,SgB,lnxstep,//xmin,
+  rhoE += (rhoEcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
+		  csmin,prec) + rhoEcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
 				       csmax,prec))/2*dcs;
   int done = 50*(csstep+1);
   cout << "\r" << setw(3) << done/csstep << "%" << flush;
@@ -347,7 +374,7 @@ double rhoE(const double xi, const double SgE, const double SgB,
 #ifdef _OPENMP
 #pragma omp atomic
 #endif
-    rhoE += rhoEcs(xi,SgE,SgB,lnxstep,//xmin,
+    rhoE += rhoEcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
 		   cs,prec)*dcs;
   }
   cout << "   " << flush;
@@ -356,12 +383,19 @@ double rhoE(const double xi, const double SgE, const double SgB,
 }
 
 double SgEMV(const double ee, const double rhoB, const double rhoE) {
-  return pow(ee,3)/12/pow(M_PI,2)*sqrt(2*rhoB)*(1/tanh(M_PI*sqrt(rhoB/rhoE))
+  return pow(ee,3)/6/pow(M_PI,2)*sqrt(2*rhoB)*rhoE/(rhoE+rhoB)/tanh(M_PI*sqrt(rhoB/rhoE));
+}
+
+double SgEpMV(const double ee, const double rhoB, const double rhoE) {
+  return pow(ee,3)/12/pow(M_PI,2)*sqrt(2*rhoB)*(rhoB/(rhoE+rhoB)/tanh(M_PI*sqrt(rhoB/rhoE))
 						+ M_PI*sqrt(rhoB/rhoE)/sinh(M_PI*sqrt(rhoB/rhoE))/sinh(M_PI*sqrt(rhoB/rhoE)));
 }
 
 double SgBMV(const double ee, const double rhoB, const double rhoE) {
-  return pow(ee,3)/12/pow(M_PI,2)*sqrt(2*rhoE)*(1/tanh(M_PI*sqrt(rhoB/rhoE))
-						- M_PI*sqrt(rhoB/rhoE)/sinh(M_PI*sqrt(rhoB/rhoE))/sinh(M_PI*sqrt(rhoB/rhoE)));
+  return pow(ee,3)/6/pow(M_PI,2)*sqrt(2*rhoE)*rhoB/(rhoE+rhoB)/tanh(M_PI*sqrt(rhoB/rhoE));
 }
 
+double SgBpMV(const double ee, const double rhoB, const double rhoE) {
+  return pow(ee,3)/12/pow(M_PI,2)*sqrt(2*rhoE)*(rhoE/(rhoE+rhoB)/tanh(M_PI*sqrt(rhoB/rhoE))
+						- M_PI*sqrt(rhoB/rhoE)/sinh(M_PI*sqrt(rhoB/rhoE))/sinh(M_PI*sqrt(rhoB/rhoE)));
+}
