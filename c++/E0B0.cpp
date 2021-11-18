@@ -16,7 +16,7 @@ using namespace std;
 #define EE 0.55
 #define TOL 0.1 //0.01
 #define EBSAFE 0.5
-#define CSSTEP 200 //200
+#define CSSTEP 100 //200
 #define LNXSTEP 30 //300
 
 const complex<double> II(0,1);
@@ -79,12 +79,10 @@ int main(int argc, char *argv[])
   //double xmin = 0.01;
   
   double xi = atof(argv[1]);
-  double SgEmax = 10*xi;
-  double SgBmax = 2*xi;
-  double E0max = SgBmax*6*M_PI*M_PI/ee/ee/ee;
-  double B0max = SgEmax*6*M_PI*M_PI/ee/ee/ee;
+  double E0max = 6*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
+  double B0max = 100*E0max;
   double E0in = E0max/10;
-  double B0in = B0max/10;
+  double B0in = E0in;
   double rhoEin = E0in*E0in/2.;
   double rhoBin = B0in*B0in/2.;
   double SgEin = SgEMV(ee,rhoBin,rhoEin);
@@ -109,7 +107,7 @@ int main(int argc, char *argv[])
     B0out = sqrt(2*rhoBout);
     E0out = sqrt(2*rhoEout);
     
-    cout << "(E0in, B0in) = (" << E0in << ", " << B0in << "), (E0out, B0out) = (" << E0out << ", " << B0out << "), " << flush;
+    cout << "(E0in, B0in) = (" << E0in << ", " << B0in << "), (E0out, B0out) = (" << E0out << ", " << B0out << "). " << flush;
 
     if (E0out > E0max || B0out > B0max) {
       E0out = min(E0out,E0max);
@@ -117,7 +115,7 @@ int main(int argc, char *argv[])
       rhoBout = B0out*B0out/2.;
       rhoEout = E0out*E0out/2.;
 
-      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "), " << flush;
+      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "). " << flush;
     }
 
     if (!(rhoEout > 0) || !(rhoBout > 0)) {
@@ -126,7 +124,7 @@ int main(int argc, char *argv[])
       rhoEout = E0out*E0out/2.;
       rhoBout = B0out*B0out/2.;
 
-      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "), " << flush;
+      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "). " << flush;
     }
 
     SgEout = SgEMV(ee,rhoBout,rhoEout);
@@ -150,6 +148,7 @@ int main(int argc, char *argv[])
     SgBin = SgBMV(ee,rhoBin,rhoEin);
     SgBpin = SgBpMV(ee,rhoBin,rhoEin);
   }
+  
   cout << "(E0out, B0out) = (" << E0out << ", " << B0out << "), (SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
 
 
@@ -285,8 +284,8 @@ double rhoB(const double xi, const double SgE, const double SgEp, const double S
 	    const slong prec) {
   double rhoB = 0;
 
-  double dcs = 2./csstep;
-  double csmin = -1, csmax = 1;
+  double dcs = 1./csstep; //2./csstep;
+  double csmin = -1, csmax = 0; //1;
   double cs;
   
   rhoB += (rhoBcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
@@ -316,7 +315,7 @@ double rhoB(const double xi, const double SgE, const double SgEp, const double S
 		   cs,prec)*dcs;
   }
 
-  return rhoB/4;
+  return 2*rhoB/4;
 }
 
 double rhoEcs(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
@@ -347,8 +346,8 @@ double rhoE(const double xi, const double SgE, const double SgEp, const double S
 	    const slong prec) {
   double rhoE = 0;
 
-  double dcs = 2./csstep;
-  double csmin = -1, csmax = 1;
+  double dcs = 1./csstep; //2./csstep;
+  double csmin = -1, csmax = 0; //1;
   double cs;
   
   rhoE += (rhoEcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,//xmin,
@@ -379,7 +378,7 @@ double rhoE(const double xi, const double SgE, const double SgEp, const double S
   }
   cout << "   " << flush;
 
-  return rhoE/4;
+  return 2*rhoE/4;
 }
 
 double SgEMV(const double ee, const double rhoB, const double rhoE) {

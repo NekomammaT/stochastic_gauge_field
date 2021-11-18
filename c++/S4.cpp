@@ -16,7 +16,7 @@ using namespace std;
 #define EE 0.55
 #define TOL 0.1 //0.01
 #define SGSAFE 0.5
-#define CSSTEP 200 //200
+#define CSSTEP 500 //200
 #define LNXSTEP 30 //300
 
 const complex<double> II(0,1);
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
   
   double xi = atof(argv[1]);
   double SgEmax = 10*xi;
-  double SgBmax = xi; //2*xi;
+  double SgBmax = 2*xi;
   double SgEin = 1;
   double SgEpin = 1;
   double SgBin = 1;
@@ -108,12 +108,12 @@ int main(int argc, char *argv[])
     cout << "(SgEin, SgEpin, SgBin, SgBpin) = (" << SgEin << ", " << SgEpin << ", " << SgBin << ", " << SgBpin << "), (rhoEout, rhoBout) = (" << rhoEout << ", " << rhoBout
 	 << "), (SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << flush;
 
-    if (SgEout > SgEmax || SgEpout > SgEmax || SgBout > SgBmax || SgBpout > SgBmax) {
+    if (SgEout > SgEmax || SgEpout > SgEmax || SgEpout > SgEout/2. || SgBout+SgBpout > SgBmax || SgBpout > SgBout/2.) {
       SgEout = min(SgEout,SgEmax);
-      SgEpout = min(SgEpout,SgEmax);
-      SgBout = min(SgBout,SgBmax);
-      SgBpout = min(SgBpout,SgBmax);
-
+      SgEpout = min(SgEpout,SgEout/2.);
+      SgBout = min(SgBout,SgBmax*2./3);
+      SgBpout = min(SgBpout,SgBout/2.);
+      
       cout << ", Sg is reduced to (SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << flush;
     }
     if (!(SgEout > 0) || !(SgEpout > 0) || !(SgBout > 0) || !(SgBpout > 0)) {
@@ -135,7 +135,8 @@ int main(int argc, char *argv[])
     SgBin = pow(SgBin*SgBin*SgBin*SgBout,1./4);
     SgBpin = pow(SgBpin*SgBpin*SgBpin*SgBpout,1./4);
   }
-  cout << "(SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
+  cout << "(SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout
+       << "), (E0out, B0out) = (" << sqrt(2*rhoEout) << ", " << sqrt(2*rhoBout) << ")" << endl;
 
 
   gettimeofday(&tv, &tz);
