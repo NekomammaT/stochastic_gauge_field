@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
   //double xmin = 0.01;
   
   double xi = atof(argv[1]);
-  double E0max = 6*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
+  double E0max = 12*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
   double B0max = 100*E0max;
   double E0in = E0max/10;
   double B0in = E0in;
@@ -262,7 +262,7 @@ double rhoBcs(const double xi, const double SgE, const double SgEp, const double
   double rhoBcs = 0;
 
   double xif = xieff(xi,SgB,SgBp,cs);
-  double gamma = 2*abs(xif);
+  double gamma = 2*xi; //2*abs(xif);
   double xmax = gamma/2;
   double xmin = xmax*(1e-3);
 
@@ -324,7 +324,7 @@ double rhoEcs(const double xi, const double SgE, const double SgEp, const double
   double rhoEcs = 0;
 
   double xif = xieff(xi,SgB,SgBp,cs);
-  double gamma = 2*abs(xif);
+  double gamma = 2*xi; //2*abs(xif);
   double xmax = gamma/2;
   double xmin = xmax*(1e-3);
 
