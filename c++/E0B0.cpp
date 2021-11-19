@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <complex>
 #include "acb_hypgeom.h"
@@ -14,10 +15,11 @@ using namespace std;
 
 #define PREC 50*3.33
 #define EE 0.55
-#define TOL 0.1 //0.01
+#define TOL 0.01 //0.01
 #define EBSAFE 0.5
 #define CSSTEP 100 //200
-#define LNXSTEP 30 //300
+#define LNXSTEP 300 //300
+#define WEIGHTN 14
 
 const complex<double> II(0,1);
 
@@ -79,8 +81,8 @@ int main(int argc, char *argv[])
   //double xmin = 0.01;
   
   double xi = atof(argv[1]);
-  double E0max = 12*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
-  double B0max = 100*E0max;
+  double E0max = 10*12*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
+  double B0max = E0max;
   double E0in = E0max/10;
   double B0in = E0in;
   double rhoEin = E0in*E0in/2.;
@@ -138,8 +140,8 @@ int main(int argc, char *argv[])
       break;
     }
 
-    E0in = pow(E0in*E0in*E0in*E0out,1./4);
-    B0in = pow(B0in*B0in*B0in*B0out,1./4);
+    E0in = pow(pow(E0in,WEIGHTN)*E0out,1./(WEIGHTN+1));
+    B0in = pow(pow(B0in,WEIGHTN)*B0out,1./(WEIGHTN+1));
     rhoEin = E0in*E0in/2.;
     rhoBin = B0in*B0in/2.;
 
@@ -151,6 +153,10 @@ int main(int argc, char *argv[])
   
   cout << "(E0out, B0out) = (" << E0out << ", " << B0out << "), (SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
 
+  string str = "consistentEB.dat";
+  ofstream ofs(str,std::ios::app);
+  ofs << xi << ' ' << E0out << ' ' << B0out << ' ' << SgEout << ' ' << SgEpout << ' ' << SgBout << ' ' <<SgBpout << endl;
+  
 
   gettimeofday(&tv, &tz);
   after = (double)tv.tv_sec + (double)tv.tv_usec * 1.e-6;
