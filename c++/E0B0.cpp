@@ -13,13 +13,13 @@
 
 using namespace std;
 
-#define PREC 50*3.33
+#define PREC 100*3.33
 #define EE 0.55
 #define TOL 0.01 //0.01
 #define EBSAFE 0.5
 #define CSSTEP 100 //200
 #define LNXSTEP 300 //300
-#define WEIGHTN 14
+#define WEIGHTN 3 //34 //14
 
 const complex<double> II(0,1);
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
   gettimeofday(&tv, &tz);
   before = (double)tv.tv_sec + (double)tv.tv_usec * 1.e-6; // start stop watch
   
-  
+
   double prec = PREC;
   double ee = EE;
   int csstep = CSSTEP;
@@ -98,6 +98,8 @@ int main(int argc, char *argv[])
 #endif
 
   cout << "xi = " << xi << endl;
+
+  //cout << abs(WS(xi,0,2*xi,prec)) << ' ' << abs(WSp(xi,0,2*xi,prec)) << endl;
 
   double rhoBout, rhoEout, B0out, E0out, SgEout, SgEpout, SgBout, SgBpout;
 
@@ -276,7 +278,7 @@ double rhoBcs(const double xi, const double SgE, const double SgEp, const double
   double xx;
   
   rhoBcs += (PBB(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xmin,prec) + PBB(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xmax,prec))/2*dlnx;
-  
+
   for (int i=1; i<lnxstep; i++) {
     xx = xmin*exp(i*dlnx);
     rhoBcs += PBB(xi,SgE,SgEp,SgB,SgBp,gamma,cs,xx,prec)*dlnx;
