@@ -19,7 +19,7 @@ using namespace std;
 #define EBSAFE 0.5
 #define CSSTEP 100 //200
 #define LNXSTEP 300 //300
-#define WEIGHTN 3 //34 //14
+#define WEIGHTN 34 //3 //34 //14
 
 const complex<double> II(0,1);
 
