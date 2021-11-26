@@ -19,7 +19,7 @@ using namespace std;
 #define EBSAFE 0.5
 #define CSSTEP 100 //200
 #define LNXSTEP 300 //300
-#define WEIGHTN 34 //3 //34 //14
+//#define WEIGHTN 34 //3 //34 //14
 
 const complex<double> II(0,1);
 
@@ -61,8 +61,8 @@ double SgBpMV(const double ee, const double rhoB, const double rhoE);
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2) {
-    cout << "xi を正しく指定してください" << endl;
+  if (argc != 3) {
+    cout << "xi および weightn を正しく指定してください" << endl;
     return 1;
   }
   
@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
   //double xmin = 0.01;
   
   double xi = atof(argv[1]);
+  int weightn = atoi(argv[2]);
   double E0max = 10*12*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
   double B0max = E0max;
   double E0in = E0max/10;
@@ -97,7 +98,7 @@ int main(int argc, char *argv[])
   cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << endl;
 #endif
 
-  cout << "xi = " << xi << endl;
+  cout << "xi = " << xi << ", weightn = " << weightn << endl;
 
   //cout << abs(WS(xi,0,2*xi,prec)) << ' ' << abs(WSp(xi,0,2*xi,prec)) << endl;
 
@@ -142,8 +143,8 @@ int main(int argc, char *argv[])
       break;
     }
 
-    E0in = pow(pow(E0in,WEIGHTN)*E0out,1./(WEIGHTN+1));
-    B0in = pow(pow(B0in,WEIGHTN)*B0out,1./(WEIGHTN+1));
+    E0in = pow(pow(E0in,weightn)*E0out,1./(weightn+1));
+    B0in = pow(pow(B0in,weightn)*B0out,1./(weightn+1));
     rhoEin = E0in*E0in/2.;
     rhoBin = B0in*B0in/2.;
 
@@ -249,7 +250,7 @@ double PBB(const double xi, const double SgE, const double SgEp, const double Sg
   double xif = xieff(xi,SgB,SgBp,cs);
   double Sgf = Sgeff(SgE,SgEp,cs);
   return exp(M_PI*xi)*pow(x,4+Sgf)*norm(c1(xi,xif,Sgf,gamma,prec)*WS(xif,Sgf,x,prec)
-					+ c2(xi,xif,Sgf,gamma,prec)*MS(xif,Sgf,x,prec));
+					+ c2(xi,xif,Sgf,gamma,prec)*MS(xif,Sgf,x,prec))/4/M_PI/M_PI;
 }
 
 double PEE(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp, const double gamma,
@@ -261,7 +262,7 @@ double PEE(const double xi, const double SgE, const double SgEp, const double Sg
   
   return exp(M_PI*xi)*pow(x,4+Sgf)
     *norm(cc1*WSp(xif,Sgf,x,prec) + cc2*MSp(xif,Sgf,x,prec)
-	  + Sgf/2./x *(cc1*WS(xif,Sgf,x,prec) + cc2*MS(xif,Sgf,x,prec)) );
+	  + Sgf/2./x *(cc1*WS(xif,Sgf,x,prec) + cc2*MS(xif,Sgf,x,prec)) )/4/M_PI/M_PI;
 }
 
 double rhoBcs(const double xi, const double SgE, const double SgEp, const double SgB, const double SgBp,
@@ -271,7 +272,7 @@ double rhoBcs(const double xi, const double SgE, const double SgEp, const double
 
   double xif = xieff(xi,SgB,SgBp,cs);
   double gamma = 2*xi; //2*abs(xif);
-  double xmax = gamma/2;
+  double xmax = gamma; //gamma/2;
   double xmin = xmax*(1e-3);
 
   double dlnx = (log(xmax)-log(xmin))/lnxstep;
@@ -333,7 +334,7 @@ double rhoEcs(const double xi, const double SgE, const double SgEp, const double
 
   double xif = xieff(xi,SgB,SgBp,cs);
   double gamma = 2*xi; //2*abs(xif);
-  double xmax = gamma/2;
+  double xmax = gamma; //gamma/2;
   double xmin = xmax*(1e-3);
 
   double dlnx = (log(xmax)-log(xmin))/lnxstep;
