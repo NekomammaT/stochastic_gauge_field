@@ -231,17 +231,17 @@ complex<double> MSp(const double xi, const double Sg, const double x, const slon
 }
 
 complex<double> c1(const double xi, const double xieff, const double Sgeff, const double gamma, const slong prec) {
-  return pow(gamma,-Sgeff/2)*Gamma(1.+II*xieff+Sgeff/2,prec)
+  return II*pow(gamma,-Sgeff/2)*Gamma(1.+II*xieff+Sgeff/2,prec)
     *(WS(xi,0,gamma,prec)*MSp(xieff,Sgeff,gamma,prec) - WSp(xi,0,gamma,prec)*MS(xieff,Sgeff,gamma,prec)
       + Sgeff/2./gamma*WS(xi,0,gamma,prec)*MS(xieff,Sgeff,gamma,prec))
-    /Gamma(Sgeff+2,prec);
+    /Gamma(Sgeff+2,prec)/2.;
 }
 
 complex<double> c2(const double xi, const double xieff, const double Sgeff, const double gamma, const slong prec) {
-  return -pow(gamma,-Sgeff/2)*Gamma(1.+II*xieff+Sgeff/2,prec)
+  return -II*pow(gamma,-Sgeff/2)*Gamma(1.+II*xieff+Sgeff/2,prec)
     *(WS(xi,0,gamma,prec)*WSp(xieff,Sgeff,gamma,prec) - WSp(xi,0,gamma,prec)*WS(xieff,Sgeff,gamma,prec)
       + Sgeff/2./gamma*WS(xi,0,gamma,prec)*WS(xieff,Sgeff,gamma,prec))
-    /Gamma(Sgeff+2,prec);
+    /Gamma(Sgeff+2,prec)/2.;
 }
 
 
