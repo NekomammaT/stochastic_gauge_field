@@ -15,11 +15,7 @@ using namespace std;
 
 #define PREC 100*3.33
 #define EE 0.55
-#define TOL 0.01 //0.01
-#define EBSAFE 0.5
-#define CSSTEP 100 //200
 #define LNXSTEP 300 //300
-//#define WEIGHTN 34 //3 //34 //14
 
 const complex<double> II(0,1);
 
@@ -61,11 +57,6 @@ double SgBpMV(const double ee, const double rhoB, const double rhoE);
 
 int main(int argc, char *argv[])
 {
-  if (argc != 3) {
-    cout << "xi および weightn を正しく指定してください" << endl;
-    return 1;
-  }
-  
   struct timeval tv;
   struct timezone tz;
   double before, after;
@@ -76,91 +67,42 @@ int main(int argc, char *argv[])
 
   double prec = PREC;
   double ee = EE;
-  int csstep = CSSTEP;
   int lnxstep = LNXSTEP;
-  //double xmin = 0.01;
   
-  double xi = atof(argv[1]);
-  int weightn = atoi(argv[2]);
-  double E0max = 10*12*M_PI*M_PI*xi/ee/ee/ee; //48*M_PI*M_PI*xi/ee/ee/ee/(3/tanh(M_PI)-2*M_PI/sinh(M_PI)/sinh(M_PI));
-  double B0max = E0max;
-  double E0in = E0max/10;
-  double B0in = E0in;
-  double rhoEin = E0in*E0in/2.;
-  double rhoBin = B0in*B0in/2.;
-  double SgEin = SgEMV(ee,rhoBin,rhoEin);
-  double SgEpin = SgEpMV(ee,rhoBin,rhoEin);
-  double SgBin = SgBMV(ee,rhoBin,rhoEin);
-  double SgBpin = SgBpMV(ee,rhoBin,rhoEin);
+  double xii = 1;
+  double dxi = 0.5;
+  double xiend = 10;
+  double SgE = 0;
+  double SgEp = 0;
+  double SgB = 0;
+  double SgBp = 0;
 
-
+  
 #ifdef _OPENMP
   cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << endl;
 #endif
 
-  cout << "xi = " << xi << ", weightn = " << weightn << endl;
+  string str = "E0B0_woSigma.dat";
+  ofstream ofs(str);
 
-  //cout << abs(WS(xi,0,2*xi,prec)) << ' ' << abs(WSp(xi,0,2*xi,prec)) << endl;
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for (int i=0; i<=(xiend-xii)/dxi; i++) {
+    double xi = xii+i*dxi;
+    double rhoEout = rhoEcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,0,prec);
+    double rhoBout = rhoBcs(xi,SgE,SgEp,SgB,SgBp,lnxstep,0,prec);
 
-  double rhoBout, rhoEout, B0out, E0out, SgEout, SgEpout, SgBout, SgBpout;
-
-  while (true) {
-    rhoBout = rhoB(xi,SgEin,SgEpin,SgBin,SgBpin,csstep,lnxstep,//xmin,
-		   prec);
-    rhoEout = rhoE(xi,SgEin,SgEpin,SgBin,SgBpin,csstep,lnxstep,//xmin,
-		   prec);
-    B0out = sqrt(2*rhoBout);
-    E0out = sqrt(2*rhoEout);
-    
-    cout << "(E0in, B0in) = (" << E0in << ", " << B0in << "), (E0out, B0out) = (" << E0out << ", " << B0out << "). " << flush;
-
-    if (E0out > E0max || B0out > B0max) {
-      E0out = min(E0out,E0max);
-      B0out = min(B0out,B0max);
-      rhoBout = B0out*B0out/2.;
-      rhoEout = E0out*E0out/2.;
-
-      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "). " << flush;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    {
+      cout << "xi = " << xi << endl;
+      ofs << xi << ' ' << sqrt(rhoEout) << ' ' << sqrt(rhoBout) << endl;
     }
-
-    if (!(rhoEout > 0) || !(rhoBout > 0)) {
-      E0out = E0in*EBSAFE;
-      B0out = B0in*EBSAFE;
-      rhoEout = E0out*E0out/2.;
-      rhoBout = B0out*B0out/2.;
-
-      cout << "E0B0 is reduced to (E0out, B0out) = (" << E0out << ", " << B0out << "). " << flush;
-    }
-
-    SgEout = SgEMV(ee,rhoBout,rhoEout);
-    SgEpout = SgEpMV(ee,rhoBout,rhoEout);
-    SgBout = SgBMV(ee,rhoBout,rhoEout);
-    SgBpout = SgBpMV(ee,rhoBout,rhoEout);
-
-    cout << "(SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
-
-    if (abs(E0in-E0out)/E0out < TOL && abs(B0in-B0out)/B0out < TOL) {
-      break;
-    }
-
-    E0in = pow(pow(E0in,weightn)*E0out,1./(weightn+1));
-    B0in = pow(pow(B0in,weightn)*B0out,1./(weightn+1));
-    rhoEin = E0in*E0in/2.;
-    rhoBin = B0in*B0in/2.;
-
-    SgEin = SgEMV(ee,rhoBin,rhoEin);
-    SgEpin = SgEpMV(ee,rhoBin,rhoEin);
-    SgBin = SgBMV(ee,rhoBin,rhoEin);
-    SgBpin = SgBpMV(ee,rhoBin,rhoEin);
   }
-  
-  cout << "(E0out, B0out) = (" << E0out << ", " << B0out << "), (SgEout, SgEpout, SgBout, SgBpout) = (" << SgEout << ", " << SgEpout << ", " << SgBout << ", " << SgBpout << ")" << endl;
 
-  string str = "consistentEB.dat";
-  ofstream ofs(str,std::ios::app);
-  ofs << xi << ' ' << E0out << ' ' << B0out << ' ' << SgEout << ' ' << SgEpout << ' ' << SgBout << ' ' <<SgBpout << endl;
   
-
   gettimeofday(&tv, &tz);
   after = (double)tv.tv_sec + (double)tv.tv_usec * 1.e-6;
   cout << after - before << " sec." << endl;
